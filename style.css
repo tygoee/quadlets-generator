@@ -1,6 +1,7 @@
-#add form,
-#content fieldset legend,
-#content fieldset div {
+#add-option,
+.option legend,
+.param,
+.values {
   display: flex;
   gap: 0.5rem;
 }

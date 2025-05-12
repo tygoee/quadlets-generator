@@ -24,8 +24,8 @@ class Format {
 
 const options = {
   container: {
-    AddCapability: {
-      name: "cap-add",
+    "cap-add": {
+      name: "AddCapability",
       allowMultiple: true,
       format: Format.sepSpace,
       params: [
@@ -85,8 +85,8 @@ const options = {
         },
       ],
     },
-    AddDevice: {
-      name: "device",
+    device: {
+      name: "AddDevice",
       allowMultiple: true,
       format: Format.mapping,
       params: [
@@ -116,32 +116,36 @@ const options = {
 
 /**
  * @param {HTMLFieldSetElement} element
+ * @param {string} option
  * @param {Object} param
- * @param {HTMLButtonElement?} [before]
- * @returns {void}
+ * @param {boolean} [isArray]
+ * @returns {HTMLInputElement}
  */
-function addInput(element, param, before = null) {
+function addInput(element, option, param, isArray = false) {
   const input = document.createElement("input");
-  input.name = param.name;
   input.type = "text";
+  input.className = "value";
+  input.name = `${option}.${param.param}`;
 
-  if (before == null) {
-    element.appendChild(input);
-    return;
-  }
+  if (isArray) input.name += `[${element.childElementCount}]`;
 
-  element.insertBefore(input, before);
+  element.appendChild(input);
+  return input;
 }
 
 /**
  * @param {HTMLFieldSetElement} element
+ * @param {string} option
  * @param {Object} param
- * @param {HTMLButtonElement?} [before]
- * @returns {void}
+ * @param {boolean} [isArray]
+ * @returns {HTMLSelectElement}
  */
-function addSelect(element, param, before) {
+function addSelect(element, option, param, isArray = false) {
   const select = document.createElement("select");
-  select.name = param.param;
+  select.className = "value";
+  select.name = `${option}.${param.param}`;
+
+  if (isArray) select.name += `[${element.childElementCount}]`;
 
   for (const opt of param.options) {
     const option = document.createElement("option");
@@ -150,26 +154,26 @@ function addSelect(element, param, before) {
     select.appendChild(option);
   }
 
-  if (!before) {
-    element.appendChild(select);
-    return;
-  }
-
-  element.insertBefore(select, before);
+  element.appendChild(select);
+  return select;
 }
 
 /**
  * @param {string} option
- * @returns {void}
+ * @returns {HTMLFieldSetElement}
  */
-function addOption(option) {
+function generateOption(option) {
   const context = options.container[option];
 
   const fieldset = document.createElement("fieldset");
+  fieldset.className = "option";
+  fieldset.name = option;
+
   const legend = document.createElement("legend");
-  legend.textContent = option;
+  legend.textContent = context.name;
 
   const remove = document.createElement("button");
+  remove.type = "button";
   remove.textContent = "Remove";
   remove.onclick = function () {
     this.parentElement.parentElement.remove();
@@ -180,8 +184,18 @@ function addOption(option) {
 
   for (const param of context.params) {
     const div = document.createElement("div");
+    div.className = "param";
+
+    // Up to 8.2 trillion fields (36^8)
+    let id;
+    while (true) {
+      id = Math.random().toString(36).substring(2, 10);
+      if (!document.getElementById(id)) break;
+    }
 
     const label = document.createElement("label");
+    label.className = "field";
+    label.htmlFor = id;
     label.textContent = param.name;
 
     if (!param.isOptional) {
@@ -200,39 +214,35 @@ function addOption(option) {
       literal: addSelect,
     }[param.type];
 
-    // Add input element to end
-    if (!(param.isOptional && param.type == "literal")) func(div, param);
-
     if (!param.isArray) {
       fieldset.appendChild(div);
+
+      // Add input element to end
+      func(div, option, param).id = id;
       continue;
     }
 
+    const values = document.createElement("div");
+    values.className = "values";
+    div.appendChild(values);
+
+    // Optional selects don't get labelled id for first option
+    if (!(param.isOptional && param.type == "literal")) func(values, option, param, true).id = id;
+
     // + and - buttons
     const more = document.createElement("button");
+    more.type = "button";
     more.className = "more";
     more.textContent = "+";
-    more.onclick = function () {
-      func(this.parentElement, param, this);
-    };
-
-    const inputs = ["INPUT", "SELECT"];
-    function nthPreviousSibling(element, amount) {
-      while (element && amount-- > 0) {
-        element = element.previousElementSibling;
-      }
-      return element;
-    }
+    more.onclick = () => func(values, option, param, true);
 
     const less = document.createElement("button");
+    less.type = "button";
     less.className = "less";
     less.textContent = "-";
-    less.onclick = function () {
-      // Remove last input but always leave one when required
-      const amount = param.isOptional ? 2 : 3;
-
-      if (inputs.includes(nthPreviousSibling(this, amount).tagName))
-        nthPreviousSibling(this, 2).remove();
+    // Remove last input but always leave one when required
+    less.onclick = () => {
+      if (values.childElementCount > (param.isOptional ? 0 : 1)) values.lastElementChild.remove();
     };
 
     div.appendChild(more);
@@ -241,21 +251,36 @@ function addOption(option) {
     fieldset.appendChild(div);
   }
 
-  document.getElementById("content").appendChild(fieldset);
+  return fieldset;
 }
 
-// Event listener for calling addOption
+/** @returns {string} */
+function generateQuadlet() {
+  return "result";
+}
+
+// Event listener for calling generateOption
 document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
-  addOption(document.getElementById("option").value);
+  const fieldset = generateOption(document.getElementById("select-option").value);
+  document.getElementById("content").appendChild(fieldset);
 
   // TODO Gray out option when taken and multiple is false
 });
 
+const form = document.getElementById("generate");
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const data = new FormData(form);
+  console.log(data);
+  document.getElementById("quadlet").textContent = generateQuadlet();
+});
+
 // Populate options
-for (option in options.container) {
+for (const option in options.container) {
   const element = document.createElement("option");
   element.value = option;
-  element.textContent = option;
-  document.getElementById("option").appendChild(element);
+  element.textContent = options.container[option].name;
+  document.getElementById("select-option").appendChild(element);
 }
