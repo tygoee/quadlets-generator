@@ -218,7 +218,10 @@ function generateOption(option) {
       fieldset.appendChild(div);
 
       // Add input element to end
-      func(div, option, param).id = id;
+      const element = func(div, option, param);
+      element.id = id;
+      // Selects don't need required=true
+      if (!param.isOptional && param.type != "literal") element.required = true;
       continue;
     }
 
@@ -227,7 +230,8 @@ function generateOption(option) {
     div.appendChild(values);
 
     // Optional selects don't get labelled id for first option
-    if (!(param.isOptional && param.type == "literal")) func(values, option, param, true).id = id;
+    if (!(param.isOptional && param.type == "literal"))
+      func(values, option, param, true).id = id;
 
     // + and - buttons
     const more = document.createElement("button");
@@ -242,7 +246,8 @@ function generateOption(option) {
     less.textContent = "-";
     // Remove last input but always leave one when required
     less.onclick = () => {
-      if (values.childElementCount > (param.isOptional ? 0 : 1)) values.lastElementChild.remove();
+      if (values.childElementCount > (param.isOptional ? 0 : 1))
+        values.lastElementChild.remove();
     };
 
     div.appendChild(more);
@@ -254,16 +259,98 @@ function generateOption(option) {
   return fieldset;
 }
 
-/** @returns {string} */
-function generateQuadlet() {
+/**
+ * @param {FormData} formData
+ * @returns {object}
+ */
+function parseFormData(formData) {
+  const result = {};
+
+  let prevOption;
+  let prevField;
+  let currentParams = {};
+  let currentArray = [];
+  for (const [key, value] of formData.entries()) {
+    // Assuming valid data
+    const [option, reference] = key.split(".");
+    const isArray = key.endsWith("]");
+    const field = isArray
+      ? reference.substring(0, reference.indexOf("["))
+      : reference;
+    const arrayIndex = isArray
+      ? Number(key.substring(key.indexOf("[") + 1, key.indexOf("]")))
+      : null;
+
+    // Next option
+    if (option != prevOption) {
+      // Add current array
+      if (currentArray.length != 0) {
+        currentParams[prevField] = currentArray;
+        currentArray = [];
+      }
+
+      // Add all params
+      if (prevOption != undefined)
+        (result[prevOption] ??= []).push(currentParams);
+      currentParams = {};
+      prevOption = option;
+    }
+
+    if (isArray) {
+      // Next option with same name (when inconsistent index)
+      if (
+        (arrayIndex != currentArray.length || field != prevField) &&
+        currentArray.length != 0
+      ) {
+        currentParams[prevField] = currentArray;
+        (result[prevOption] ??= []).push(currentParams);
+
+        currentParams = {};
+        currentArray = [];
+      }
+
+      currentArray.push(value);
+      prevField = field;
+      continue;
+    }
+
+    // Add previous array
+    if (currentArray.length != 0) {
+      currentParams[prevField] = currentArray;
+      currentArray = [];
+    }
+
+    if (value != "") currentParams[field] = value;
+
+    prevField = field;
+  }
+
+  // Last option
+  if (currentArray.length != 0) {
+    currentParams[prevField] = currentArray;
+    currentArray = [];
+  }
+  (result[prevOption] ??= []).push(currentParams);
+
+  return result;
+}
+
+/**
+ * @param {object} data
+ * @returns {string}
+ */
+function generateQuadlet(data) {
+  console.log(data);
   return "result";
 }
 
 // Event listener for calling generateOption
 document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
-  const fieldset = generateOption(document.getElementById("select-option").value);
-  document.getElementById("content").appendChild(fieldset);
+  const fieldset = generateOption(
+    document.getElementById("select-option").value
+  );
+  document.getElementById("options").appendChild(fieldset);
 
   // TODO Gray out option when taken and multiple is false
 });
@@ -273,8 +360,9 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const data = new FormData(form);
-  console.log(data);
-  document.getElementById("quadlet").textContent = generateQuadlet();
+  document.getElementById("quadlet").textContent = generateQuadlet(
+    parseFormData(data)
+  );
 });
 
 // Populate options
