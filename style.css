@@ -1,0 +1,6 @@
+#add form,
+#content fieldset legend,
+#content fieldset div {
+  display: flex;
+  gap: 0.5rem;
+}
