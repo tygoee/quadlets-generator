@@ -32,6 +32,18 @@ const formDataAssertions = [
     },
   ],
   [
+    { "device.host/1": "/dev/device", "device.host/2": "/dev/device" },
+    { device: [{ host: "/dev/device" }, { host: "/dev/device" }] },
+  ],
+  [
+    {
+      "device.host/1": "/dev/device",
+      "device.container": "/dev/device",
+      "device.host/2": "/dev/device",
+    },
+    { device: [{ host: "/dev/device", container: "/dev/device" }, { host: "/dev/device" }] },
+  ],
+  [
     { "cap-add.options[0]": "CAP_NET_BIND_SERVICE" },
     { "cap-add": [{ options: ["CAP_NET_BIND_SERVICE"] }] },
   ],
@@ -55,9 +67,7 @@ const formDataAssertions = [
       "cap-add.dummy": "dummy",
     },
     {
-      "cap-add": [
-        { options: ["CAP_NET_BIND_SERVICE", "CAP_SYSLOG"], dummy: "dummy" },
-      ],
+      "cap-add": [{ options: ["CAP_NET_BIND_SERVICE", "CAP_SYSLOG"], dummy: "dummy" }],
     },
   ],
   [
@@ -66,10 +76,7 @@ const formDataAssertions = [
       "cap-add.options[0]/2": "CAP_SYSLOG",
     },
     {
-      "cap-add": [
-        { options: ["CAP_NET_BIND_SERVICE"] },
-        { options: ["CAP_SYSLOG"] },
-      ],
+      "cap-add": [{ options: ["CAP_NET_BIND_SERVICE"] }, { options: ["CAP_SYSLOG"] }],
     },
   ],
   [
@@ -97,6 +104,25 @@ const formDataAssertions = [
   ],
 ];
 
+const formatAssertions = [
+  [Format.sepSpace({ options: ["A"] }), "A"],
+  [Format.sepSpace({ options: ["A", "B"] }), "A B"],
+  [Format.mapping({ host: "/dev/device" }), "/dev/device"],
+  [Format.mapping({ host: "/dev/device", container: "/dev/device" }), "/dev/device:/dev/device"],
+  [
+    Format.mapping({ host: "/dev/device", container: "/dev/device", permissions: ["r", "w", "m"] }),
+    "/dev/device:/dev/device:rwm",
+  ],
+  [
+    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "m"] }),
+    "/dev/device:/dev/device:rwm",
+  ],
+  [
+    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }),
+    "/dev/device:/dev/device:rw",
+  ],
+];
+
 for (const assertion of formDataAssertions) {
   [assertion[0], assertion[1]] = [
     JSON.stringify(parseFormData(generateFormData(assertion[0]))),
@@ -104,9 +130,13 @@ for (const assertion of formDataAssertions) {
   ];
 
   console.debug("asserting", assertion[0], "equals", assertion[1]);
-  console.assert(assertion[0] == assertion[1], assertion[0], assertion[1]);
+  console.assert(assertion[0] == assertion[1], assertion[0], "equals", assertion[1]);
 }
 
+for (const assertion of formatAssertions) {
+  console.debug("asserting", assertion[0], "equals", assertion[1]);
+  console.assert(assertion[0] == assertion[1], assertion[0], "equals", assertion[1]);
+}
 /* Test script (all files/functions have to be loaded)
 const script = document.createElement('script');
 script.src = 'test.js';

@@ -2,22 +2,27 @@
 
 class Format {
   /**
-   * @param {string[]} options
+   * @param {Object} param
+   * @param {string[]} param.options
    * @returns {string}
    */
-  static sepSpace(options) {
+  static sepSpace({ options }) {
     return options.join(" ");
   }
 
   /**
-   * @param {string} host
-   * @param {string?} [container]
-   * @param {string[]} [permissions]
+   * @param {Object} param
+   * @param {string} param.host
+   * @param {string?} [param.container]
+   * @param {string[]} [param.permissions]
    * @returns {string}
    */
-  static mapping(host, container = null, permissions = []) {
-    permissions = permissions.length == 0 ? "" : `:${permissions.join("")}`;
-    container = container == null ? "" : `:${container}`;
+  static mapping({ host, container = null, permissions = [] }) {
+    // Remove duplicates
+    permissions = [...new Set(permissions)];
+
+    permissions = permissions.length > 0 ? `:${permissions.join("")}` : "";
+    container = container != null ? `:${container}` : permissions.length > 0 ? `:${host}` : "";
     return `${host}${container}${permissions}`;
   }
 }
@@ -230,8 +235,7 @@ function generateOption(option) {
     div.appendChild(values);
 
     // Optional selects don't get labelled id for first option
-    if (!(param.isOptional && param.type == "literal"))
-      func(values, option, param, true).id = id;
+    if (!(param.isOptional && param.type == "literal")) func(values, option, param, true).id = id;
 
     // + and - buttons
     const more = document.createElement("button");
@@ -246,8 +250,7 @@ function generateOption(option) {
     less.textContent = "-";
     // Remove last input but always leave one when required
     less.onclick = () => {
-      if (values.childElementCount > (param.isOptional ? 0 : 1))
-        values.lastElementChild.remove();
+      if (values.childElementCount > (param.isOptional ? 0 : 1)) values.lastElementChild.remove();
     };
 
     div.appendChild(more);
@@ -274,9 +277,7 @@ function parseFormData(formData) {
     // Assuming valid data
     const [option, reference] = key.split(".");
     const isArray = key.endsWith("]");
-    const field = isArray
-      ? reference.substring(0, reference.indexOf("["))
-      : reference;
+    const field = isArray ? reference.substring(0, reference.indexOf("[")) : reference;
     const arrayIndex = isArray
       ? Number(key.substring(key.indexOf("[") + 1, key.indexOf("]")))
       : null;
@@ -290,18 +291,14 @@ function parseFormData(formData) {
       }
 
       // Add all params
-      if (prevOption != undefined)
-        (result[prevOption] ??= []).push(currentParams);
+      if (prevOption != undefined) (result[prevOption] ??= []).push(currentParams);
       currentParams = {};
       prevOption = option;
     }
 
     if (isArray) {
       // Next option with same name (when inconsistent index)
-      if (
-        (arrayIndex != currentArray.length || field != prevField) &&
-        currentArray.length != 0
-      ) {
+      if ((arrayIndex != currentArray.length || field != prevField) && currentArray.length != 0) {
         currentParams[prevField] = currentArray;
         (result[prevOption] ??= []).push(currentParams);
 
@@ -318,6 +315,13 @@ function parseFormData(formData) {
     if (currentArray.length != 0) {
       currentParams[prevField] = currentArray;
       currentArray = [];
+    }
+
+    // Next option (double field)
+    if (field in currentParams) {
+      currentParams[prevField] = value;
+      (result[prevOption] ??= []).push(currentParams);
+      currentParams = {};
     }
 
     if (value != "") currentParams[field] = value;
@@ -340,16 +344,22 @@ function parseFormData(formData) {
  * @returns {string}
  */
 function generateQuadlet(data) {
-  console.log(data);
-  return "result";
+  let result = [];
+
+  for (const [name, content] of Object.entries(data)) {
+    for (const value of content) {
+      const context = options.container[name];
+      result.push([context.name, context.format(value)]);
+    }
+  }
+
+  return result.map(([key, value]) => `${key}=${value}`).join("\n");
 }
 
 // Event listener for calling generateOption
 document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
-  const fieldset = generateOption(
-    document.getElementById("select-option").value
-  );
+  const fieldset = generateOption(document.getElementById("select-option").value);
   document.getElementById("options").appendChild(fieldset);
 
   // TODO Gray out option when taken and multiple is false
@@ -360,9 +370,7 @@ form.addEventListener("submit", (event) => {
   event.preventDefault();
 
   const data = new FormData(form);
-  document.getElementById("quadlet").textContent = generateQuadlet(
-    parseFormData(data)
-  );
+  document.getElementById("quadlet").textContent = generateQuadlet(parseFormData(data));
 });
 
 // Populate options
