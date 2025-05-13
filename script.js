@@ -1,20 +1,21 @@
 "use strict";
 
+// TODO support line wrapping (space-seperated, keys-values etc)
 class Format {
   /**
-   * @param {Object} param
-   * @param {string[]} param.options
+   * @param {Object} param0
+   * @param {string[]} param0.values
    * @returns {string}
    */
-  static sepSpace({ options }) {
-    return options.join(" ");
+  static sepSpace({ values }) {
+    return values.join(" ");
   }
 
   /**
-   * @param {Object} param
-   * @param {string} param.host
-   * @param {string?} [param.container]
-   * @param {string[]} [param.permissions]
+   * @param {Object} param0
+   * @param {string} param0.host
+   * @param {string?} [param0.container]
+   * @param {string[]} [param0.permissions]
    * @returns {string}
    */
   static mapping({ host, container = null, permissions = [] }) {
@@ -22,20 +23,39 @@ class Format {
     permissions = [...new Set(permissions)];
 
     permissions = permissions.length > 0 ? `:${permissions.join("")}` : "";
-    container = container != null ? `:${container}` : permissions.length > 0 ? `:${host}` : "";
+    container = container !== null ? `:${container}` : permissions.length > 0 ? `:${host}` : "";
     return `${host}${container}${permissions}`;
+  }
+
+  /**
+   * @param {Object} param0
+   * @param {string} param0.hostname
+   * @param {string} param0.ip
+   * @returns {string}
+   */
+  static hostMapping({ hostname, ip }) {
+    return `${hostname}:${ip}`;
+  }
+
+  /**
+   * @param {Object} param0
+   * @param {Object<string, string>} param0.values
+   */
+  static keyVal({ values }) {
+    for (const [key, value] in Object.entries(values)) {
+    }
   }
 }
 
 const options = {
   container: {
-    "cap-add": {
-      name: "AddCapability",
+    AddCapability: {
+      name: "cap-add",
       allowMultiple: true,
       format: Format.sepSpace,
       params: [
         {
-          param: "options",
+          param: "values",
           name: "Capabilities",
           type: "literal",
           isArray: true,
@@ -90,19 +110,19 @@ const options = {
         },
       ],
     },
-    device: {
-      name: "AddDevice",
+    AddDevice: {
+      name: "device",
       allowMultiple: true,
       format: Format.mapping,
       params: [
         {
           param: "host",
-          name: "Host",
+          name: "Host device",
           type: "path",
         },
         {
           param: "container",
-          name: "Container",
+          name: "Container device",
           type: "path",
           isOptional: true,
         },
@@ -113,6 +133,34 @@ const options = {
           isArray: true,
           isOptional: true,
           options: ["r", "w", "m"],
+        },
+      ],
+    },
+    AddHost: {
+      name: "add-host",
+      allowMultiple: true,
+      format: Format.hostMapping,
+      params: [
+        {
+          param: "hostname",
+          name: "Hostname",
+          type: "string",
+        },
+        {
+          param: "ip",
+          name: "IP Address",
+          type: "string",
+        },
+      ],
+    },
+    Image: {
+      name: "image",
+      format: ({ name }) => name,
+      params: [
+        {
+          param: "name",
+          name: "Name",
+          type: "string",
         },
       ],
     },
@@ -165,26 +213,38 @@ function addSelect(element, option, param, isArray = false) {
 
 /**
  * @param {string} option
+ * @param {bool} [isRemovable]
  * @returns {HTMLFieldSetElement}
  */
-function generateOption(option) {
-  const context = options.container[option];
+function generateOption(option, isRemovable = true) {
+  const objectName = Object.keys(options.container).find(
+    (key) => options.container[key].name === option
+  );
+  const context = options.container[objectName];
+
+  if (!context.allowMultiple) {
+    document
+      .getElementById("select-option")
+      .querySelector(`option[value=${option}]`).disabled = true;
+  }
 
   const fieldset = document.createElement("fieldset");
   fieldset.className = "option";
   fieldset.name = option;
 
   const legend = document.createElement("legend");
-  legend.textContent = context.name;
+  legend.textContent = objectName;
 
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.onclick = function () {
-    this.parentElement.parentElement.remove();
-  };
+  if (isRemovable) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.onclick = function () {
+      this.parentElement.parentElement.remove();
+    };
+    legend.appendChild(remove);
+  }
 
-  legend.appendChild(remove);
   fieldset.appendChild(legend);
 
   for (const param of context.params) {
@@ -226,7 +286,7 @@ function generateOption(option) {
       const element = func(div, option, param);
       element.id = id;
       // Selects don't need required=true
-      if (!param.isOptional && param.type != "literal") element.required = true;
+      if (!param.isOptional && param.type !== "literal") element.required = true;
       continue;
     }
 
@@ -235,7 +295,7 @@ function generateOption(option) {
     div.appendChild(values);
 
     // Optional selects don't get labelled id for first option
-    if (!(param.isOptional && param.type == "literal")) func(values, option, param, true).id = id;
+    if (!(param.isOptional && param.type === "literal")) func(values, option, param, true).id = id;
 
     // + and - buttons
     const more = document.createElement("button");
@@ -283,22 +343,25 @@ function parseFormData(formData) {
       : null;
 
     // Next option
-    if (option != prevOption) {
+    if (option !== prevOption) {
       // Add current array
-      if (currentArray.length != 0) {
+      if (currentArray.length !== 0) {
         currentParams[prevField] = currentArray;
         currentArray = [];
       }
 
       // Add all params
-      if (prevOption != undefined) (result[prevOption] ??= []).push(currentParams);
+      if (prevOption !== undefined) (result[prevOption] ??= []).push(currentParams);
       currentParams = {};
       prevOption = option;
     }
 
     if (isArray) {
       // Next option with same name (when inconsistent index)
-      if ((arrayIndex != currentArray.length || field != prevField) && currentArray.length != 0) {
+      if (
+        (arrayIndex !== currentArray.length || field !== prevField) &&
+        currentArray.length !== 0
+      ) {
         currentParams[prevField] = currentArray;
         (result[prevOption] ??= []).push(currentParams);
 
@@ -312,7 +375,7 @@ function parseFormData(formData) {
     }
 
     // Add previous array
-    if (currentArray.length != 0) {
+    if (currentArray.length !== 0) {
       currentParams[prevField] = currentArray;
       currentArray = [];
     }
@@ -324,13 +387,13 @@ function parseFormData(formData) {
       currentParams = {};
     }
 
-    if (value != "") currentParams[field] = value;
+    if (value !== "") currentParams[field] = value;
 
     prevField = field;
   }
 
   // Last option
-  if (currentArray.length != 0) {
+  if (currentArray.length !== 0) {
     currentParams[prevField] = currentArray;
     currentArray = [];
   }
@@ -348,8 +411,11 @@ function generateQuadlet(data) {
 
   for (const [name, content] of Object.entries(data)) {
     for (const value of content) {
-      const context = options.container[name];
-      result.push([context.name, context.format(value)]);
+      const objectName = Object.keys(options.container).find(
+        (key) => options.container[key].name === name
+      );
+      const context = options.container[objectName];
+      result.push([objectName, context.format(value)]);
     }
   }
 
@@ -361,10 +427,9 @@ document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
   const fieldset = generateOption(document.getElementById("select-option").value);
   document.getElementById("options").appendChild(fieldset);
-
-  // TODO Gray out option when taken and multiple is false
 });
 
+// Event listener for generating quadlet
 const form = document.getElementById("generate");
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -376,7 +441,11 @@ form.addEventListener("submit", (event) => {
 // Populate options
 for (const option in options.container) {
   const element = document.createElement("option");
-  element.value = option;
-  element.textContent = options.container[option].name;
+  element.value = options.container[option].name;
+  element.textContent = option;
   document.getElementById("select-option").appendChild(element);
 }
+
+// Add image option (required container key)
+const fieldset = generateOption("image", false);
+document.getElementById("options").appendChild(fieldset);

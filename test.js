@@ -1,5 +1,12 @@
 "use strict";
 
+// TODO Make this an automated test (Github actions)
+/* Test script (all files/functions have to be loaded)
+const script = document.createElement('script');
+script.src = 'test.js';
+document.body.appendChild(script);
+*/
+
 /**
  * @param {Object<string, string>} obj
  * @returns {FormData}
@@ -8,7 +15,7 @@ function generateFormData(obj) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(obj)) {
     const index = key.indexOf("/");
-    formData.append(index == -1 ? key : key.substring(0, index), value);
+    formData.append(index === -1 ? key : key.substring(0, index), value);
   }
 
   return formData;
@@ -105,8 +112,8 @@ const formDataAssertions = [
 ];
 
 const formatAssertions = [
-  [Format.sepSpace({ options: ["A"] }), "A"],
-  [Format.sepSpace({ options: ["A", "B"] }), "A B"],
+  [Format.sepSpace({ values: ["A"] }), "A"],
+  [Format.sepSpace({ values: ["A", "B"] }), "A B"],
   [Format.mapping({ host: "/dev/device" }), "/dev/device"],
   [Format.mapping({ host: "/dev/device", container: "/dev/device" }), "/dev/device:/dev/device"],
   [
@@ -121,6 +128,7 @@ const formatAssertions = [
     Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }),
     "/dev/device:/dev/device:rw",
   ],
+  [Format.hostMapping({ hostname: "example.com", ip: "192.168.0.1" }), "example.com:192.168.0.1"],
 ];
 
 for (const assertion of formDataAssertions) {
@@ -130,15 +138,10 @@ for (const assertion of formDataAssertions) {
   ];
 
   console.debug("asserting", assertion[0], "equals", assertion[1]);
-  console.assert(assertion[0] == assertion[1], assertion[0], "equals", assertion[1]);
+  console.assert(assertion[0] === assertion[1], assertion[0], "equals", assertion[1]);
 }
 
 for (const assertion of formatAssertions) {
   console.debug("asserting", assertion[0], "equals", assertion[1]);
-  console.assert(assertion[0] == assertion[1], assertion[0], "equals", assertion[1]);
+  console.assert(assertion[0] === assertion[1], assertion[0], "equals", assertion[1]);
 }
-/* Test script (all files/functions have to be loaded)
-const script = document.createElement('script');
-script.src = 'test.js';
-document.body.appendChild(script);
-*/
