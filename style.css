@@ -8,7 +8,16 @@
 #add-option,
 .option legend,
 .param,
-.values {
+.values,
+.pair {
   display: flex;
   gap: 0.5rem;
+}
+
+.values {
+  flex-wrap: wrap;
+}
+
+.param {
+  align-items: flex-start;
 }

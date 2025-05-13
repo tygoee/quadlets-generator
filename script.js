@@ -14,8 +14,8 @@ class Format {
   /**
    * @param {Object} param0
    * @param {string} param0.host
-   * @param {string?} [param0.container]
-   * @param {string[]} [param0.permissions]
+   * @param {string} [param0.container]
+   * @param {string[]} param0.permissions
    * @returns {string}
    */
   static mapping({ host, container = null, permissions = [] }) {
@@ -29,21 +29,12 @@ class Format {
 
   /**
    * @param {Object} param0
-   * @param {string} param0.hostname
-   * @param {string} param0.ip
-   * @returns {string}
-   */
-  static hostMapping({ hostname, ip }) {
-    return `${hostname}:${ip}`;
-  }
-
-  /**
-   * @param {Object} param0
    * @param {Object<string, string>} param0.values
    */
-  static keyVal({ values }) {
-    for (const [key, value] in Object.entries(values)) {
-    }
+  static pair({ values }) {
+    return Object.entries(values)
+      .map(([key, value]) => (value.includes(" ") ? `"${key}=${value}"` : `${key}=${value}`))
+      .join(" ");
   }
 }
 
@@ -57,7 +48,7 @@ const options = {
         {
           param: "values",
           name: "Capabilities",
-          type: "literal",
+          type: "select",
           isArray: true,
           options: [
             "CAP_AUDIT_CONTROL",
@@ -129,7 +120,7 @@ const options = {
         {
           param: "permissions",
           name: "Permissions",
-          type: "literal",
+          type: "select",
           isArray: true,
           isOptional: true,
           options: ["r", "w", "m"],
@@ -139,7 +130,7 @@ const options = {
     AddHost: {
       name: "add-host",
       allowMultiple: true,
-      format: Format.hostMapping,
+      format: ({ hostname, ip }) => `${hostname}:${ip}`,
       params: [
         {
           param: "hostname",
@@ -150,6 +141,19 @@ const options = {
           param: "ip",
           name: "IP Address",
           type: "string",
+        },
+      ],
+    },
+    Annotation: {
+      name: "annotation",
+      allowMultiple: true,
+      format: Format.pair,
+      params: [
+        {
+          param: "values",
+          name: "Annotations",
+          type: "pair",
+          isArray: true,
         },
       ],
     },
@@ -171,14 +175,17 @@ const options = {
  * @param {HTMLFieldSetElement} element
  * @param {string} option
  * @param {Object} param
- * @param {boolean} [isArray]
+ * @param {boolean} isArray
+ * @param {string} [id]
  * @returns {HTMLInputElement}
  */
-function addInput(element, option, param, isArray = false) {
+function addInput(element, option, param, isArray = false, id = null) {
   const input = document.createElement("input");
-  input.type = "text";
+  if (id) input.id = id;
   input.className = "value";
   input.name = `${option}.${param.param}`;
+  input.type = "text";
+  input.required = !param.isOptional;
 
   if (isArray) input.name += `[${element.childElementCount}]`;
 
@@ -190,11 +197,13 @@ function addInput(element, option, param, isArray = false) {
  * @param {HTMLFieldSetElement} element
  * @param {string} option
  * @param {Object} param
- * @param {boolean} [isArray]
+ * @param {boolean} isArray
+ * @param {string} [id]
  * @returns {HTMLSelectElement}
  */
-function addSelect(element, option, param, isArray = false) {
+function addSelect(element, option, param, isArray = false, id = null) {
   const select = document.createElement("select");
+  if (id) select.id = id;
   select.className = "value";
   select.name = `${option}.${param.param}`;
 
@@ -212,8 +221,43 @@ function addSelect(element, option, param, isArray = false) {
 }
 
 /**
+ * @param {HTMLFieldSetElement} element
  * @param {string} option
- * @param {bool} [isRemovable]
+ * @param {Object} param
+ * @param {boolean} isArray
+ * @param {string} [id]
+ * @returns {HTMLDivElement}
+ */
+function addPair(element, option, param, isArray = false, id = null) {
+  const div = document.createElement("div");
+  div.className = "pair";
+
+  const key = document.createElement("input");
+  if (id) key.id = id;
+  key.className = "value";
+  key.name = `${option}.${param.param}.keys[${element.childElementCount}]`;
+  key.type = "text";
+  key.required = !param.isOptional;
+
+  const span = document.createElement("span");
+  span.textContent = "=";
+
+  const value = document.createElement("input");
+  value.className = "value";
+  value.name = `${option}.${param.param}.values[${element.childElementCount}]`;
+  value.type = "text";
+  value.required = !param.isOptional;
+
+  div.appendChild(key);
+  div.appendChild(span);
+  div.appendChild(value);
+  element.appendChild(div);
+  return div;
+}
+
+/**
+ * @param {string} option
+ * @param {bool} isRemovable
  * @returns {HTMLFieldSetElement}
  */
 function generateOption(option, isRemovable = true) {
@@ -276,17 +320,15 @@ function generateOption(option, isRemovable = true) {
     const func = {
       path: addInput,
       string: addInput,
-      literal: addSelect,
+      select: addSelect,
+      pair: addPair,
     }[param.type];
 
     if (!param.isArray) {
       fieldset.appendChild(div);
 
       // Add input element to end
-      const element = func(div, option, param);
-      element.id = id;
-      // Selects don't need required=true
-      if (!param.isOptional && param.type !== "literal") element.required = true;
+      func(div, option, param, false, id);
       continue;
     }
 
@@ -295,7 +337,7 @@ function generateOption(option, isRemovable = true) {
     div.appendChild(values);
 
     // Optional selects don't get labelled id for first option
-    if (!(param.isOptional && param.type === "literal")) func(values, option, param, true).id = id;
+    if (!(param.isOptional && param.type === "select")) func(values, option, param, true, id);
 
     // + and - buttons
     const more = document.createElement("button");
@@ -329,30 +371,50 @@ function generateOption(option, isRemovable = true) {
 function parseFormData(formData) {
   const result = {};
 
+  function updateParams() {
+    // Add current array
+    if (currentArray.length !== 0) {
+      currentParams[prevField] = currentArray;
+      currentArray = [];
+    }
+
+    // Add current pairs
+    if (Object.keys(currentPairs).length !== 0) {
+      currentParams[prevField] = currentPairs;
+      currentPairs = {};
+    }
+  }
+
+  function updateResult() {
+    // Add params to result
+    result[prevOption] ??= [];
+    result[prevOption].push(currentParams);
+    currentParams = {};
+  }
+
   let prevOption;
   let prevField;
+  let prevPairKey;
   let currentParams = {};
   let currentArray = [];
+  let currentPairs = {};
   for (const [key, value] of formData.entries()) {
     // Assuming valid data
-    const [option, reference] = key.split(".");
+    let values = key.split(".");
     const isArray = key.endsWith("]");
-    const field = isArray ? reference.substring(0, reference.indexOf("[")) : reference;
+    const lastIndex = values.length - 1;
+    if (isArray) values[lastIndex] = values[lastIndex].substring(0, values[lastIndex].indexOf("["));
+    const [option, field, type] = values;
     const arrayIndex = isArray
       ? Number(key.substring(key.indexOf("[") + 1, key.indexOf("]")))
       : null;
 
     // Next option
     if (option !== prevOption) {
-      // Add current array
-      if (currentArray.length !== 0) {
-        currentParams[prevField] = currentArray;
-        currentArray = [];
+      if (prevOption !== undefined) {
+        updateParams();
+        updateResult();
       }
-
-      // Add all params
-      if (prevOption !== undefined) (result[prevOption] ??= []).push(currentParams);
-      currentParams = {};
       prevOption = option;
     }
 
@@ -362,42 +424,44 @@ function parseFormData(formData) {
         (arrayIndex !== currentArray.length || field !== prevField) &&
         currentArray.length !== 0
       ) {
-        currentParams[prevField] = currentArray;
-        (result[prevOption] ??= []).push(currentParams);
-
-        currentParams = {};
-        currentArray = [];
+        updateParams();
+        updateResult();
       }
 
-      currentArray.push(value);
+      // Pair
+      if (type === "keys") {
+        prevPairKey = value;
+      } else if (type === "values") {
+        currentPairs[prevPairKey] = value;
+      } else {
+        currentArray.push(value);
+      }
+
       prevField = field;
       continue;
     }
 
-    // Add previous array
-    if (currentArray.length !== 0) {
-      currentParams[prevField] = currentArray;
-      currentArray = [];
+    updateParams();
+
+    // Empty option
+    if (value === "") {
+      prevField = field;
+      continue;
     }
 
     // Next option (double field)
     if (field in currentParams) {
       currentParams[prevField] = value;
-      (result[prevOption] ??= []).push(currentParams);
-      currentParams = {};
+      updateResult();
     }
 
-    if (value !== "") currentParams[field] = value;
-
+    currentParams[field] = value;
     prevField = field;
   }
 
   // Last option
-  if (currentArray.length !== 0) {
-    currentParams[prevField] = currentArray;
-    currentArray = [];
-  }
-  (result[prevOption] ??= []).push(currentParams);
+  updateParams();
+  updateResult();
 
   return result;
 }
