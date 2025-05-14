@@ -163,14 +163,8 @@ const formatAssertions = [
     Format.mapping({ host: "/dev/device", container: "/dev/device", permissions: ["r", "w", "m"] }),
     "/dev/device:/dev/device:rwm",
   ],
-  [
-    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "m"] }),
-    "/dev/device:/dev/device:rwm",
-  ],
-  [
-    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }),
-    "/dev/device:/dev/device:rw",
-  ],
+  [Format.mapping({ host: "/dev/device", permissions: ["r", "w", "m"] }), "/dev/device:rwm"],
+  [Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }), "/dev/device:rw"],
   [Format.pair({ values: { A: "B" } }), "A=B"],
   [Format.pair({ values: { A: "B", C: "D" } }), "A=B C=D"],
   [Format.pair({ values: { A: "B C" } }), '"A=B C"'],
