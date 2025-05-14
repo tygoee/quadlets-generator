@@ -23,7 +23,12 @@
         </fieldset>
         <fieldset id="generator">
           <legend>Generator</legend>
-          <button type="submit">Generate Quadlet</button>
+          <button type="submit" name="submit" value="quadlet">
+            Generate quadlet file
+          </button>
+          <button type="submit" name="submit" value="podman-run">
+            Generate podman-run command
+          </button>
           <pre id="quadlet"></pre>
         </fieldset>
       </form>

@@ -4,6 +4,14 @@
 class Format {
   /**
    * @param {Object} param0
+   * @param {string} param0.value
+   */
+  static none({ value }) {
+    return value;
+  }
+
+  /**
+   * @param {Object} param0
    * @param {string[]} param0.values
    * @returns {string}
    */
@@ -18,7 +26,12 @@ class Format {
    * @param {string[]} param0.permissions
    * @returns {string}
    */
-  static mapping({ host, container = null, permissions = [], ifExists = false }) {
+  static mapping({
+    host,
+    container = null,
+    permissions = [],
+    ifExists = false,
+  }) {
     // Remove duplicates
     permissions = [...new Set(permissions)];
 
@@ -33,15 +46,40 @@ class Format {
    */
   static pair({ values }) {
     return Object.entries(values)
-      .map(([key, value]) => (value.includes(" ") ? `"${key}=${value}"` : `${key}=${value}`))
+      .map(([key, value]) =>
+        value.includes(" ") ? `"${key}=${value}"` : `${key}=${value}`
+      )
       .join(" ");
   }
 }
 
+/*
+-- options
+options:
+  [container volume network build pod kube]:
+    option: (quadlet name)
+
+-- option
+option:
+  arg: string (podman-run arg)
+  allowMultiple?: bool
+  format: function
+  argFormat?: function (format for podman-run, if different)
+  params: array[param]
+
+-- param (format function parameters)
+param:
+  param: string
+  name: string (pretty name)
+  type: [path string select boolean pair] (max 1 pair!)
+  isArray?: bool
+  isOptional?: bool
+  -> options: array[option] | object[name, option]
+*/
 const options = {
   container: {
     AddCapability: {
-      name: "cap-add",
+      arg: "cap-add",
       allowMultiple: true,
       format: Format.sepSpace,
       params: [
@@ -102,7 +140,7 @@ const options = {
       ],
     },
     AddDevice: {
-      name: "device",
+      arg: "device",
       allowMultiple: true,
       format: Format.mapping,
       params: [
@@ -133,7 +171,7 @@ const options = {
       ],
     },
     AddHost: {
-      name: "add-host",
+      arg: "add-host",
       allowMultiple: true,
       format: ({ hostname, ip }) => `${hostname}:${ip}`,
       params: [
@@ -150,7 +188,7 @@ const options = {
       ],
     },
     Annotation: {
-      name: "annotation",
+      arg: "annotation",
       allowMultiple: true,
       format: Format.pair,
       params: [
@@ -162,13 +200,26 @@ const options = {
         },
       ],
     },
-    Image: {
-      name: "image",
-      format: ({ name }) => name,
+    AutoUpdate: {
+      arg: "label",
+      format: Format.none,
+      argFormat: ({ value }) => `io.containers.autoupdate=${value}`,
       params: [
         {
-          param: "name",
-          name: "Name",
+          param: "value",
+          name: "Value",
+          type: "select",
+          options: ["registry", "local"],
+        },
+      ],
+    },
+    Image: {
+      arg: "image",
+      format: Format.none,
+      params: [
+        {
+          param: "value",
+          name: "Name / FQIN",
           type: "string",
         },
       ],

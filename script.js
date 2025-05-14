@@ -5,7 +5,7 @@
  * @param {string} option
  * @param {Object} param
  * @param {boolean} isArray
- * @param {Object<string, string>} attributes
+ * @param {Object.<string, string>} attributes
  * @returns {HTMLInputElement}
  */
 function addInput(element, option, param, isArray = false, attributes = {}) {
@@ -29,7 +29,7 @@ function addInput(element, option, param, isArray = false, attributes = {}) {
  * @param {string} option
  * @param {Object} param
  * @param {boolean} isArray
- * @param {Object<string, string>} attributes
+ * @param {Object.<string, string>} attributes
  * @returns {HTMLSelectElement}
  */
 function addSelect(element, option, param, isArray = false, attributes = {}) {
@@ -43,7 +43,9 @@ function addSelect(element, option, param, isArray = false, attributes = {}) {
   if (isArray) select.name += `[${element.childElementCount}]`;
 
   const optionsIsArray = Array.isArray(param.options);
-  for (const opt of optionsIsArray ? param.options : Object.keys(param.options)) {
+  for (const opt of optionsIsArray
+    ? param.options
+    : Object.keys(param.options)) {
     const option = document.createElement("option");
     option.value = opt;
     option.textContent = optionsIsArray ? opt : param.options[opt];
@@ -59,7 +61,7 @@ function addSelect(element, option, param, isArray = false, attributes = {}) {
  * @param {string} option
  * @param {Object} param
  * @param {boolean} isArray
- * @param {Object<string, string>} attributes
+ * @param {Object.<string, string>} attributes
  * @returns {HTMLInputElement}
  */
 function addBoolean(element, option, param, isArray = false, attributes = {}) {
@@ -80,7 +82,7 @@ function addBoolean(element, option, param, isArray = false, attributes = {}) {
  * @param {string} option
  * @param {Object} param
  * @param {boolean} isArray
- * @param {Object<string, string>} attributes
+ * @param {Object.<string, string>} attributes
  * @returns {HTMLDivElement}
  */
 function addPair(element, option, param, isArray = false, attributes = {}) {
@@ -119,10 +121,7 @@ function addPair(element, option, param, isArray = false, attributes = {}) {
  * @returns {HTMLFieldSetElement}
  */
 function generateOption(option, isRemovable = true) {
-  const objectName = Object.keys(options.container).find(
-    (key) => options.container[key].name === option
-  );
-  const context = options.container[objectName];
+  const context = options.container[option];
 
   if (!context.allowMultiple) {
     document
@@ -135,7 +134,7 @@ function generateOption(option, isRemovable = true) {
   fieldset.name = option;
 
   const legend = document.createElement("legend");
-  legend.textContent = objectName;
+  legend.textContent = option;
 
   if (isRemovable) {
     const remove = document.createElement("button");
@@ -212,7 +211,8 @@ function generateOption(option, isRemovable = true) {
     less.textContent = "-";
     // Remove last input but always leave one when required
     less.onclick = () => {
-      if (values.childElementCount > (param.isOptional ? 0 : 1)) values.lastElementChild.remove();
+      if (values.childElementCount > (param.isOptional ? 0 : 1))
+        values.lastElementChild.remove();
     };
 
     div.appendChild(more);
@@ -258,15 +258,20 @@ function parseFormData(formData) {
   let currentParams = {};
   let currentArray = [];
   let currentPairs = {};
-  for (const [key, value] of formData.entries()) {
+  for (const [name, value] of formData.entries()) {
+    // Empty option
+    if (name == "submit" || value === "") continue;
+
     // Assuming valid data
-    let values = key.split(".");
-    const isArray = key.endsWith("]");
-    const lastIndex = values.length - 1;
-    if (isArray) values[lastIndex] = values[lastIndex].substring(0, values[lastIndex].indexOf("["));
+    let values = name.split(".");
+    if (values[0] === "submit") continue;
+    const isArray = name.endsWith("]");
+    const index = values.length - 1;
+    if (isArray)
+      values[index] = values[index].substring(0, values[index].indexOf("["));
     const [option, field, type] = values;
     const arrayIndex = isArray
-      ? Number(key.substring(key.indexOf("[") + 1, key.indexOf("]")))
+      ? Number(name.substring(name.indexOf("[") + 1, name.indexOf("]")))
       : null;
 
     // Next option
@@ -303,12 +308,6 @@ function parseFormData(formData) {
 
     updateParams();
 
-    // Empty option
-    if (value === "") {
-      prevField = field;
-      continue;
-    }
-
     // Next option (double field)
     if (field in currentParams) {
       currentParams[prevField] = value;
@@ -327,49 +326,109 @@ function parseFormData(formData) {
 }
 
 /**
- * @param {object} data
- * @returns {string}
+ * @param {Object.<string, Object[]>} data
+ * @param {boolean} arg
+ * @returns {string[][]}
  */
-function generateQuadlet(data) {
+function generatePairs(data, arg = false) {
   let result = [];
 
   for (const [name, content] of Object.entries(data)) {
-    for (const value of content) {
-      const objectName = Object.keys(options.container).find(
-        (key) => options.container[key].name === name
-      );
-      const context = options.container[objectName];
-      result.push([objectName, context.format(value)]);
+    for (const params of content) {
+      if (!arg) {
+        const context = options.container[name];
+        result.push([name, context.format(params)]);
+        continue;
+      }
+
+      const context = options.container[name];
+      const format = context.argFormat || context.format;
+
+      // Seperate seperable args
+      let addedPair = false;
+      for (const [param, value] of Object.entries(params)) {
+        // Check if value is object (object = pair)
+        if (!(value && typeof value === "object" && !Array.isArray(value)))
+          continue;
+
+        addedPair = true;
+        for (const [key, val] of Object.entries(value))
+          result.push([
+            context.arg,
+            // Make a shallow copy and overwrite the pair
+            format({ ...params, [param]: { [key]: val } }),
+          ]);
+
+        // Only one pair param (previous step will fail when multiple)
+        break;
+      }
+
+      if (!addedPair) result.push([context.arg, format(params)]);
     }
   }
 
-  return result.map(([key, value]) => `${key}=${value}`).join("\n");
+  return result;
+}
+
+/**
+ * @param {string[][]} data
+ * @returns {string}
+ */
+function generateQuadlet(data) {
+  // TODO ini sections and description/name etc
+  return data.map(([key, value]) => `${key}=${value}`).join("\n");
+}
+
+/**
+ * @param {string[][]} data
+ * @returns {string}
+ */
+function generatePodmanRun(data) {
+  // TODO (!) fix arguments with spaces and other characters
+  let args = [];
+  let image, exec;
+  for (let [key, value] of data) {
+    if (key === "image") image = value;
+    else if (key === "exec") exec = value;
+    else args.push(`--${key} ${value}`);
+  }
+
+  return ["podman run", ...args, image, exec].filter(Boolean).join(" ");
 }
 
 // Event listener for calling generateOption
 document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
-  const fieldset = generateOption(document.getElementById("select-option").value);
+  const fieldset = generateOption(
+    document.getElementById("select-option").value
+  );
   document.getElementById("options").appendChild(fieldset);
 });
 
-// Event listener for generating quadlet
+// Event listener for generating output
 const form = document.getElementById("generate");
 form.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const data = new FormData(form);
-  document.getElementById("quadlet").textContent = generateQuadlet(parseFormData(data));
+  const formData = new FormData(form, event.submitter);
+  const output =
+    formData.get("submit") === "quadlet"
+      ? generateQuadlet(generatePairs(parseFormData(formData)))
+      : formData.get("submit") === "podman-run"
+      ? generatePodmanRun(generatePairs(parseFormData(formData), true))
+      : "";
+
+  document.getElementById("quadlet").textContent = output;
 });
 
 // Populate options
 for (const option in options.container) {
   const element = document.createElement("option");
-  element.value = options.container[option].name;
+  element.value = option;
   element.textContent = option;
   document.getElementById("select-option").appendChild(element);
 }
 
 // Add image option (required container key)
-const fieldset = generateOption("image", false);
+const fieldset = generateOption("Image", false);
 document.getElementById("options").appendChild(fieldset);
