@@ -257,19 +257,125 @@ const assertions = [
  * @param {any[]} assertion
  * @returns {void}
  */
-function assert(assertion) {
-  [assertion[0], assertion[1]] = [
-    JSON.stringify(assertion[0]),
-    JSON.stringify(assertion[1]),
-  ];
+function assert([key, value]) {
+  [key, value] = [JSON.stringify(key), JSON.stringify(value)];
 
-  console.debug("asserting", assertion[0], "equals", assertion[1]);
+  console.debug("asserting", key, "equals", value);
+  console.assert(key === value, `${key} !== ${value}`);
+}
+
+function assertType(key, value) {
   console.assert(
-    assertion[0] === assertion[1],
-    assertion[0],
-    "equals",
-    assertion[1]
+    typeof key === value,
+    `typeof ${JSON.stringify(key)} !== ${value}`
   );
+}
+
+function testOptions() {
+  for (const option of Object.values(options.container)) {
+    assertType(option.arg, "string");
+    if ("allowMultiple" in option) assertType(option.allowMultiple, "boolean");
+    if ("format" in option) assertType(option.format, "function");
+    if ("argFormat" in option) assertType(option.argFormat, "function");
+    console.assert(
+      Array.isArray(option.params),
+      `Array.isArray(${JSON.stringify(option.params)}) === false`
+    );
+
+    for (const param of option.params) {
+      assertType(param.param, "string");
+      assertType(param.name, "string");
+      assertType(param.type, "string");
+      console.assert(
+        ["path", "string", "select", "boolean", "pair"].includes(param.type),
+        `${param.type} !== path | string | select | boolean | pair`
+      );
+
+      if ("isArray" in param) assertType(param.isArray, "boolean");
+      if ("isOptional" in param) assertType(param.isOptional, "boolean");
+
+      if (param.type === "select") {
+        // select needs options
+        console.assert(
+          "options" in param && param.options != null,
+          `${param.type} === select && ${JSON.stringify(
+            param.options
+          )} === undefined | null`
+        );
+
+        // verify options is object or array
+        assertType(param.options, "object");
+
+        // all values have to be strings
+        if (Array.isArray(param.options))
+          param.options.forEach((option) => assertType(option, "string"));
+        else
+          for (const [key, value] of Object.entries(param.options)) {
+            assertType(key, "string");
+            assertType(value, "string");
+          }
+      }
+
+      if ("default" in param)
+        switch (typeof param.default) {
+          case "string":
+            // has to be select
+            console.assert(
+              param.type === "select",
+              `typeof ${param.default} === string && ${param.type} !=== select`
+            );
+            break;
+          case "boolean":
+            // has to be boolean (checkbox)
+            console.assert(
+              param.type === "boolean",
+              `typeof ${param.default} === boolean && ${param.type} !=== boolean`
+            );
+            break;
+          default:
+            // when neither string or boolean
+            console.error(
+              `Assertion failed: ${param.default} !== string | boolean`
+            );
+        }
+
+      if ("placeholder" in param)
+        switch (typeof param.placeholder) {
+          case "string":
+            // has to be path or string
+            console.assert(
+              ["path", "string"].includes(param.type),
+              `typeof ${param.placeholder} === string && ${param.type} !=== path | string`
+            );
+            break;
+          case "object":
+            // has to be pair
+            console.assert(
+              param.type === "pair",
+              `typeof ${param.placeholder} === object && ${param.type} !=== pair`
+            );
+            // object has to be array
+            console.assert(
+              Array.isArray(param.placeholder),
+              `typeof ${param.placeholder} === object && Array.isArray(${param.placeholder}) === false`
+            );
+            // array has to be of length 2
+            console.assert(
+              param.placeholder.length === 2,
+              `typeof ${param.placeholder} === object && length ${param.placeholder.length} !== 2`
+            );
+            // both have to be strings
+            param.placeholder.forEach((placeholder) =>
+              assertType(placeholder, "string")
+            );
+            break;
+          default:
+            console.error(
+              `Assertion failed: ${param.placeholder} !== string | object`
+            );
+        }
+    }
+  }
 }
 
 for (const assertion of formDataAssertions) {
@@ -278,3 +384,5 @@ for (const assertion of formDataAssertions) {
 }
 
 for (const assertion of assertions) assert(assertion);
+
+testOptions();

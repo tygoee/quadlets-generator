@@ -21,3 +21,7 @@
 .param {
   align-items: flex-start;
 }
+
+pre {
+  white-space: pre-wrap;
+}

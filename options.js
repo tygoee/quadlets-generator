@@ -48,7 +48,7 @@ class Format {
 /*
 -- options
 options:
-  [container volume network build pod kube]:
+  [container pod kube network volume build image]:
     option: (quadlet name)
 
 -- option
@@ -64,12 +64,12 @@ param:
   param: string
   name: string (pretty name)
   type: [path string select boolean pair] (max 1 pair!)
-  default?: string (select) | bool (when type=boolean, default false)
+  default?: string (type=select) | bool (type=boolean, default false)
   placeholder?: string (type=path|string), string[] (type=pair)
   isArray?: bool
-  isOptional?: bool (always true when type=boolean)
+  isOptional?: bool (always ignored (true) when type=boolean)
 
-  when type == select:
+  when type === select:
   -> options: option[] | object<name, option>
 */
 const options = {
@@ -248,6 +248,30 @@ const options = {
         },
       ],
     },
+    // DNS: {
+    //   arg: "dns",
+    // },
+    // DNSOption: {
+    //   arg: "dns-option",
+    // },
+    // DNSSearch: {
+    //   arg: "dns-search",
+    // },
+    // DropCapability: {
+    //   arg: "cap-drop",
+    // },
+    // Entrypoint: {
+    //   arg: "entrypoint",
+    // },
+    // Environment: {
+    //   arg: "env",
+    // },
+    // EnvironmentFile: {
+    //   arg: "env-file",
+    // },
+    // EnvironmentHost: {
+    //   arg: "env-host",
+    // },
     Exec: {
       arg: "exec", // no arg, placed after image
       params: [
@@ -259,6 +283,66 @@ const options = {
         },
       ],
     },
+    // ExposeHostPort: {
+    //   arg: "expose",
+    // },
+    // GIDMap: {
+    //   arg: "gidmap",
+    // },
+    // GlobalArgs: {
+    //   arg: "global-args", // before podman run
+    // },
+    // Group: {
+    //   arg: "user",
+    // },
+    // GroupAdd: {
+    //   arg: "group-add",
+    // },
+    // HealthCmd: {
+    //   arg: "health-cmd",
+    // },
+    // HealthInterval: {
+    //   arg: "health-interval",
+    // },
+    // HealthLogDestination: {
+    //   arg: "health-log-destination",
+    // },
+    // HealthMaxLogCount: {
+    //   arg: "health-max-log-count",
+    // },
+    // HealthMaxLogSize: {
+    //   arg: "health-max-log-size",
+    // },
+    // HealthOnFailure: {
+    //   arg: "health-on-failure",
+    // },
+    // HealthRetries: {
+    //   arg: "health-retries",
+    // },
+    // HealthStartPeriod: {
+    //   arg: "health-start-period",
+    // },
+    // HealthStartupCmd: {
+    //   arg: "health-startup-cmd",
+    // },
+    // HealthStartupInterval: {
+    //   arg: "health-startup-interval",
+    // },
+    // HealthStartupRetries: {
+    //   arg: "health-startup-retries",
+    // },
+    // HealthStartupSuccess: {
+    //   arg: "health-startup-success",
+    // },
+    // HealthStartupTimeout: {
+    //   arg: "health-startup-timeout",
+    // },
+    // HealthTimeout: {
+    //   arg: "health-timeout",
+    // },
+    // HostName: {
+    //   arg: "hostname",
+    // },
     Image: {
       arg: "image", // no arg, placed at end of command
       params: [
@@ -270,5 +354,267 @@ const options = {
         },
       ],
     },
+    // IP: {
+    //   arg: "ip",
+    // },
+    // IP6: {
+    //   arg: "ip6",
+    // },
+    // Label: {
+    //   arg: "label",
+    // },
+    // LogDriver: {
+    //   arg: "log-driver",
+    // },
+    // LogOpt: {
+    //   arg: "log-opt",
+    // },
+    // Mask: {
+    //   arg: "security-opt",
+    // },
+    // Memory: {
+    //   arg: "memory",
+    // },
+    // Mount: {
+    //   arg: "mount",
+    // },
+    // Network: {
+    //   arg: "network",
+    // },
+    // NetworkAlias: {
+    //   arg: "network-alias",
+    // },
+    // NoNewPrivileges: {
+    //   arg: "security-opt",
+    // },
+    // Notify: {
+    //   arg: "sdnotify",
+    // },
+    // PidsLimit: {
+    //   arg: "pids-limit",
+    // },
+    // Pod: {
+    //   arg: "pod",
+    // },
+    // PodmanArgs: {
+    //   arg: "podman-args", // no arg, after podman run
+    // },
+    // PublishPort: {
+    //   arg: "publish",
+    // },
+    // Pull: {
+    //   arg: "pull",
+    // },
+    // ReadOnly: {
+    //   arg: "read-only",
+    // },
+    // ReadOnlyTmpfs: {
+    //   arg: "read-only-tmpfs",
+    // },
+    // ReloadCmd: {
+    //   arg: "reload-cmd", // no arg
+    // },
+    // ReloadSignal: {
+    //   arg: "reload-signal", // no arg
+    // },
+    // Retry: {
+    //   arg: "retry",
+    // },
+    // RetryDelay: {
+    //   arg: "retry-delay",
+    // },
+    // Rootfs: {
+    //   arg: "rootfs",
+    // },
+    // RunInit: {
+    //   arg: "init",
+    // },
+    // SeccompProfile: {
+    //   arg: "security-opt seccomp",
+    // },
+    // Secret: {
+    //   arg: "secret",
+    // },
+    // SecurityLabelDisable: {
+    //   arg: "security-opt",
+    // },
+    // SecurityLabelFileType: {
+    //   arg: "security-opt",
+    // },
+    // SecurityLabelLevel: {
+    //   arg: "security-opt",
+    // },
+    // SecurityLabelNested: {
+    //   arg: "security-opt",
+    // },
+    // SecurityLabelType: {
+    //   arg: "security-opt",
+    // },
+    // ShmSize: {
+    //   arg: "shm-size",
+    // },
+    // StartWithPod: {
+    //   arg: "start-with-pod", // no arg
+    // },
+    // StopSignal: {
+    //   arg: "stop-signal",
+    // },
+    // StopTimeout: {
+    //   arg: "stop-timeout",
+    // },
+    // SubGIDMap: {
+    //   arg: "subgidname",
+    // },
+    // SubUIDMap: {
+    //   arg: "subuidname",
+    // },
+    // Sysctl: {
+    //   arg: "sysctl",
+    // },
+    // Timezone: {
+    //   arg: "tz",
+    // },
+    // Tmpfs: {
+    //   arg: "tmpfs",
+    // },
+    // UIDMap: {
+    //   arg: "uidmap",
+    // },
+    // Ulimit: {
+    //   arg: "ulimit",
+    // },
+    // Unmask: {
+    //   arg: "security-opt",
+    // },
+    // User: {
+    //   arg: "user",
+    // },
+    // UserNS: {
+    //   arg: "userns",
+    // },
+    // Volume: {
+    //   arg: "volume",
+    // },
+    // WorkingDir: {
+    //   arg: "workdir",
+    // },
+  },
+  pod: {
+    AddHost: {},
+    ContainersConfModule: {},
+    DNS: {},
+    DNSOption: {},
+    DNSSearch: {},
+    GIDMap: {},
+    GlobalArgs: {},
+    HostName: {},
+    IP: {},
+    IP6: {},
+    Label: {},
+    Network: {},
+    NetworkAlias: {},
+    PodmanArgs: {},
+    PodName: {},
+    PublishPort: {},
+    ServiceName: {},
+    ShmSize: {},
+    SubGIDMap: {},
+    SubUIDMap: {},
+    UIDMap: {},
+    UserNS: {},
+    Volume: {},
+  },
+  kube: {
+    AutoUpdate: {},
+    ConfigMap: {},
+    ContainersConfModule: {},
+    ExitCodePropagation: {},
+    GlobalArgs: {},
+    KubeDownForce: {},
+    LogDriver: {},
+    Network: {},
+    PodmanArgs: {},
+    PublishPort: {},
+    SetWorkingDirectory: {},
+    UserNS: {},
+    Yaml: {},
+  },
+  network: {
+    ContainersConfModule: {},
+    DisableDNS: {},
+    DNS: {},
+    Driver: {},
+    Gateway: {},
+    GlobalArgs: {},
+    Internal: {},
+    IPAMDriver: {},
+    IPRange: {},
+    IPv6: {},
+    Label: {},
+    NetworkDeleteOnStop: {},
+    NetworkName: {},
+    Options: {},
+    PodmanArgs: {},
+    Subnet: {},
+  },
+  volume: {
+    ContainersConfModule: {},
+    Copy: {},
+    Device: {},
+    Driver: {},
+    GlobalArgs: {},
+    Group: {},
+    Image: {},
+    Label: {},
+    Options: {},
+    PodmanArgs: {},
+    Type: {},
+    User: {},
+    VolumeName: {},
+  },
+  build: {
+    Annotation: {},
+    Arch: {},
+    AuthFile: {},
+    ContainersConfModule: {},
+    DNS: {},
+    DNSOption: {},
+    DNSSearch: {},
+    Environment: {},
+    File: {},
+    ForceRM: {},
+    GlobalArgs: {},
+    GroupAdd: {},
+    ImageTag: {},
+    Label: {},
+    Network: {},
+    PodmanArgs: {},
+    Pull: {},
+    Retry: {},
+    RetryDelay: {},
+    Secret: {},
+    SetWorkingDirectory: {},
+    Target: {},
+    TLSVerify: {},
+    Variant: {},
+    Volume: {},
+  },
+  image: {
+    AllTags: {},
+    Arch: {},
+    AuthFile: {},
+    CertDir: {},
+    ContainersConfModule: {},
+    Creds: {},
+    DecryptionKey: {},
+    GlobalArgs: {},
+    Image: {},
+    ImageTag: {},
+    OS: {},
+    PodmanArgs: {},
+    Retry: {},
+    RetryDelay: {},
+    TLSVerify: {},
+    Variant: {},
   },
 };

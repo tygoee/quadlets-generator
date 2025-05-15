@@ -427,7 +427,7 @@ function generateQuadlet(data) {
  */
 function generatePodmanRun(data) {
   // TODO (!) fix arguments with spaces and other characters
-  let rootArgs = [];
+  let globalArgs = [];
   let args = [];
   let image, exec;
   for (let [key, value] of data) {
@@ -439,14 +439,14 @@ function generatePodmanRun(data) {
         exec = value;
         break;
       case "module":
-        rootArgs.push(value);
+        globalArgs.push(value);
         break;
       default:
         args.push(`--${key} ${value}`);
     }
   }
 
-  return ["podman", ...rootArgs, "run", ...args, image, exec]
+  return ["podman", ...globalArgs, "run", ...args, image, exec]
     .filter(Boolean)
     .join(" ");
 }
