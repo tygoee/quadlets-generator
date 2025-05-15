@@ -182,7 +182,6 @@ const formDataAssertions = [
 ];
 
 const assertions = [
-  [Format.none({ value: "A" }), "A"],
   [Format.sepSpace({ values: ["A"] }), "A"],
   [Format.sepSpace({ values: ["A", "B"] }), "A B"],
   [Format.mapping({ host: "/dev/device" }), "/dev/device"],

@@ -4,14 +4,6 @@
 class Format {
   /**
    * @param {Object} param0
-   * @param {string} param0.value
-   */
-  static none({ value }) {
-    return value;
-  }
-
-  /**
-   * @param {Object} param0
    * @param {string[]} param0.values
    * @returns {string}
    */
@@ -61,20 +53,24 @@ options:
 
 -- option
 option:
-  arg: string (podman-run arg)
+  arg: string (podman-run arg, not unique!)
   allowMultiple?: bool
-  format: function
+  format?: function (defaults to {value} => value)
   argFormat?: function (format for podman-run, if different)
-  params: array[param]
+  params: param[]
 
 -- param (format function parameters)
 param:
   param: string
   name: string (pretty name)
   type: [path string select boolean pair] (max 1 pair!)
+  default?: string (select) | bool (when type=boolean, default false)
+  placeholder?: string (type=path|string), string[] (type=pair)
   isArray?: bool
-  isOptional?: bool
-  -> options: array[option] | object[name, option]
+  isOptional?: bool (always true when type=boolean)
+
+  when type == select:
+  -> options: option[] | object<name, option>
 */
 const options = {
   container: {
@@ -148,11 +144,13 @@ const options = {
           param: "host",
           name: "Host device",
           type: "path",
+          placeholder: "/dev/device",
         },
         {
           param: "container",
           name: "Container device",
           type: "path",
+          placeholder: "/dev/device",
           isOptional: true,
         },
         {
@@ -179,11 +177,13 @@ const options = {
           param: "hostname",
           name: "Hostname",
           type: "string",
+          placeholder: "example.com",
         },
         {
           param: "ip",
           name: "IP Address",
           type: "string",
+          placeholder: "192.168.1.0",
         },
       ],
     },
@@ -196,13 +196,13 @@ const options = {
           param: "values",
           name: "Annotations",
           type: "pair",
+          placeholder: ["annotation", "value"],
           isArray: true,
         },
       ],
     },
     AutoUpdate: {
       arg: "label",
-      format: Format.none,
       argFormat: ({ value }) => `io.containers.autoupdate=${value}`,
       params: [
         {
@@ -213,14 +213,60 @@ const options = {
         },
       ],
     },
+    CgroupsMode: {
+      arg: "cgroups",
+      params: [
+        {
+          param: "value",
+          name: "Mode",
+          type: "select",
+          default: "split",
+          options: ["enabled", "split", "no-conmon", "disabled"],
+        },
+      ],
+    },
+    ContainerName: {
+      arg: "name",
+      params: [
+        {
+          param: "value",
+          name: "Name",
+          type: "string",
+          placeholder: "systemd-%N",
+        },
+      ],
+    },
+    ContainersConfModule: {
+      arg: "module", // before podman run
+      allowMultiple: true,
+      params: [
+        {
+          param: "value",
+          name: "Path",
+          type: "path",
+          placeholder: "containers.conf",
+        },
+      ],
+    },
+    Exec: {
+      arg: "exec", // no arg, placed after image
+      params: [
+        {
+          param: "value",
+          name: "Arguments",
+          type: "string",
+          placeholder: "--option value",
+        },
+      ],
+    },
     Image: {
-      arg: "image",
-      format: Format.none,
+      arg: "image", // no arg, placed at end of command
       params: [
         {
           param: "value",
           name: "Name / FQIN",
           type: "string",
+          placeholder: "docker.io/library/nginx:latest",
         },
       ],
     },
