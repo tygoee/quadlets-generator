@@ -25,10 +25,7 @@ function generateFormData(obj) {
 
 const formDataAssertions = [
   // One option, single
-  [
-    { "AddDevice.host": "/dev/device" },
-    { AddDevice: [{ host: "/dev/device" }] },
-  ],
+  [{ "AddDevice.host": "/dev/device" }, { AddDevice: [{ host: "/dev/device" }] }],
   // One option, multiple
   [
     { "AddDevice.host": "/dev/device", "AddDevice.container": "/dev/device" },
@@ -70,10 +67,7 @@ const formDataAssertions = [
       "AddDevice.host/2": "/dev/device",
     },
     {
-      AddDevice: [
-        { host: "/dev/device", container: "/dev/device" },
-        { host: "/dev/device" },
-      ],
+      AddDevice: [{ host: "/dev/device", container: "/dev/device" }, { host: "/dev/device" }],
     },
   ],
   // Array, single, one field
@@ -107,9 +101,7 @@ const formDataAssertions = [
       "AddCapability.dummy": "dummy",
     },
     {
-      AddCapability: [
-        { options: ["CAP_NET_BIND_SERVICE", "CAP_SYSLOG"], dummy: "dummy" },
-      ],
+      AddCapability: [{ options: ["CAP_NET_BIND_SERVICE", "CAP_SYSLOG"], dummy: "dummy" }],
     },
   ],
   // Array, overlapping index, one field
@@ -119,10 +111,7 @@ const formDataAssertions = [
       "AddCapability.options[0]/2": "CAP_SYSLOG",
     },
     {
-      AddCapability: [
-        { options: ["CAP_NET_BIND_SERVICE"] },
-        { options: ["CAP_SYSLOG"] },
-      ],
+      AddCapability: [{ options: ["CAP_NET_BIND_SERVICE"] }, { options: ["CAP_SYSLOG"] }],
     },
   ],
   // Array, overlapping index, multiple fields
@@ -179,16 +168,20 @@ const formDataAssertions = [
       AddDevice: [{ host: "/dev/device" }],
     },
   ],
+  // Ignore submit option
+  [
+    {
+      submit: "quadlet",
+    },
+    {},
+  ],
 ];
 
 const assertions = [
   [Format.sepSpace({ values: ["A"] }), "A"],
   [Format.sepSpace({ values: ["A", "B"] }), "A B"],
   [Format.mapping({ host: "/dev/device" }), "/dev/device"],
-  [
-    Format.mapping({ host: "/dev/device", container: "/dev/device" }),
-    "/dev/device:/dev/device",
-  ],
+  [Format.mapping({ host: "/dev/device", container: "/dev/device" }), "/dev/device:/dev/device"],
   [
     Format.mapping({
       host: "/dev/device",
@@ -197,24 +190,15 @@ const assertions = [
     }),
     "/dev/device:/dev/device:rwm",
   ],
-  [
-    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "m"] }),
-    "/dev/device:rwm",
-  ],
-  [
-    Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }),
-    "/dev/device:rw",
-  ],
+  [Format.mapping({ host: "/dev/device", permissions: ["r", "w", "m"] }), "/dev/device:rwm"],
+  [Format.mapping({ host: "/dev/device", permissions: ["r", "w", "r"] }), "/dev/device:rw"],
   [Format.pair({ values: { A: "B" } }), "A=B"],
   [Format.pair({ values: { A: "B", C: "D" } }), "A=B C=D"],
   [Format.pair({ values: { A: "B C" } }), '"A=B C"'],
   [Format.pair({ values: { A: "B C", D: "E" } }), '"A=B C" D=E'],
 
   // One field, arg false
-  [
-    generatePairs({ AutoUpdate: [{ value: "registry" }] }),
-    [["AutoUpdate", "registry"]],
-  ],
+  [generatePairs({ AutoUpdate: [{ value: "registry" }] }), [["AutoUpdate", "registry"]]],
   // Multiple fields, arg false
   [
     generatePairs({
@@ -227,20 +211,14 @@ const assertions = [
     ],
   ],
   // Arg true, default format
-  [
-    generatePairs({ AddDevice: [{ host: "/dev/device" }] }, true),
-    [["device", "/dev/device"]],
-  ],
+  [generatePairs({ AddDevice: [{ host: "/dev/device" }] }, true), [["device", "/dev/device"]]],
   // Arg true, non-default argFormat
   [
     generatePairs({ AutoUpdate: [{ value: "registry" }] }, true),
     [["label", "io.containers.autoupdate=registry"]],
   ],
   // Arg false, seperable field
-  [
-    generatePairs({ Annotation: [{ values: { A: "B", C: "D" } }] }),
-    [["Annotation", "A=B C=D"]],
-  ],
+  [generatePairs({ Annotation: [{ values: { A: "B", C: "D" } }] }), [["Annotation", "A=B C=D"]]],
   // Arg true, seperable field
   [
     generatePairs({ Annotation: [{ values: { A: "B", C: "D" } }] }, true),
@@ -265,10 +243,7 @@ function assert([key, value]) {
 }
 
 function assertType(key, value) {
-  console.assert(
-    typeof key === value,
-    `typeof ${JSON.stringify(key)} !== ${value}`
-  );
+  console.assert(typeof key === value, `typeof ${JSON.stringify(key)} !== ${value}`);
 }
 
 function testOptions() {
@@ -279,7 +254,7 @@ function testOptions() {
     if ("argFormat" in option) assertType(option.argFormat, "function");
     console.assert(
       Array.isArray(option.params),
-      `Array.isArray(${JSON.stringify(option.params)}) === false`
+      `Array.isArray(option.params (${JSON.stringify(option.params)})) === false`
     );
 
     for (const param of option.params) {
@@ -288,19 +263,20 @@ function testOptions() {
       assertType(param.type, "string");
       console.assert(
         ["path", "string", "select", "boolean", "pair"].includes(param.type),
-        `${param.type} !== path | string | select | boolean | pair`
+        `param.type (${param.type}) !== path | string | select | boolean | pair`
       );
 
       if ("isArray" in param) assertType(param.isArray, "boolean");
       if ("isOptional" in param) assertType(param.isOptional, "boolean");
+      if ("condition" in param) assertType(param.condition, "function");
 
       if (param.type === "select") {
         // select needs options
         console.assert(
           "options" in param && param.options != null,
-          `${param.type} === select && ${JSON.stringify(
+          `param.type (${param.type}) === select && param.options (${JSON.stringify(
             param.options
-          )} === undefined | null`
+          )}) === undefined | null`
         );
 
         // verify options is object or array
@@ -322,20 +298,20 @@ function testOptions() {
             // has to be select
             console.assert(
               param.type === "select",
-              `typeof ${param.default} === string && ${param.type} !=== select`
+              `typeof param.default (${param.default}) === string && param.type !== select (${param.type})`
             );
             break;
           case "boolean":
             // has to be boolean (checkbox)
             console.assert(
               param.type === "boolean",
-              `typeof ${param.default} === boolean && ${param.type} !=== boolean`
+              `typeof param.default (${param.default}) === boolean && param.type (${param.type}) !== boolean`
             );
             break;
           default:
             // when neither string or boolean
             console.error(
-              `Assertion failed: ${param.default} !== string | boolean`
+              `Assertion failed: param.default (${param.default}) !== string | boolean`
             );
         }
 
@@ -345,33 +321,31 @@ function testOptions() {
             // has to be path or string
             console.assert(
               ["path", "string"].includes(param.type),
-              `typeof ${param.placeholder} === string && ${param.type} !=== path | string`
+              `typeof param.placeholder (${param.placeholder}) === string && param.type (${param.type}) !== path | string`
             );
             break;
           case "object":
             // has to be pair
             console.assert(
               param.type === "pair",
-              `typeof ${param.placeholder} === object && ${param.type} !=== pair`
+              `typeof param.placeholder (${param.placeholder}) === object && param.type (${param.type}) !== pair`
             );
             // object has to be array
             console.assert(
               Array.isArray(param.placeholder),
-              `typeof ${param.placeholder} === object && Array.isArray(${param.placeholder}) === false`
+              `typeof param.placeholder (${param.placeholder}) === object && Array.isArray(param.placeholder) === false`
             );
             // array has to be of length 2
             console.assert(
               param.placeholder.length === 2,
-              `typeof ${param.placeholder} === object && length ${param.placeholder.length} !== 2`
+              `typeof param.placeholder (${param.placeholder}) === object && param.placeholder.length (${param.placeholder.length}) !== 2`
             );
             // both have to be strings
-            param.placeholder.forEach((placeholder) =>
-              assertType(placeholder, "string")
-            );
+            param.placeholder.forEach((placeholder) => assertType(placeholder, "string"));
             break;
           default:
             console.error(
-              `Assertion failed: ${param.placeholder} !== string | object`
+              `Assertion failed: param.placeholder (${param.placeholder}) !== string | object`
             );
         }
     }

@@ -15,7 +15,7 @@ function addInput(element, option, param, attributes = {}) {
   input.required = !param.isOptional;
   if (param.placeholder) input.placeholder = param.placeholder;
   for (const [name, value] of Object.entries(attributes)) {
-    input.setAttribute(name, value);
+    input[name] = value;
   }
 
   if (param.isArray) input.name += `[${element.childElementCount}]`;
@@ -37,7 +37,7 @@ function addSelect(element, option, param, attributes = {}) {
   select.name = `${option}.${param.param}`;
   select.required = param.isArray || !param.isOptional;
   for (const [name, value] of Object.entries(attributes)) {
-    select.setAttribute(name, value);
+    select[name] = value;
   }
 
   if (param.isArray) select.name += `[${element.childElementCount}]`;
@@ -52,9 +52,7 @@ function addSelect(element, option, param, attributes = {}) {
   }
 
   const optionsIsArray = Array.isArray(param.options);
-  for (const opt of optionsIsArray
-    ? param.options
-    : Object.keys(param.options)) {
+  for (const opt of optionsIsArray ? param.options : Object.keys(param.options)) {
     const option = document.createElement("option");
     option.value = opt;
     option.selected = param.default === opt;
@@ -80,7 +78,7 @@ function addBoolean(element, option, param, attributes = {}) {
   input.type = "checkbox";
   input.checked = param.default;
   for (const [name, value] of Object.entries(attributes)) {
-    if (name !== "id") input.setAttribute(name, value);
+    input[name] = value;
   }
 
   element.appendChild(input);
@@ -113,12 +111,11 @@ function addPair(element, option, param, attributes = {}) {
   value.className = "value";
   value.name = `${option}.${param.param}.values[${element.childElementCount}]`;
   value.required = !param.isOptional;
-  if (Array.isArray(param.placeholder))
-    value.placeholder = param.placeholder[1];
+  if (Array.isArray(param.placeholder)) value.placeholder = param.placeholder[1];
 
   for (const [name, attrValue] of Object.entries(attributes)) {
-    key.setAttribute(name, attrValue);
-    if (name !== "id") value.setAttribute(name, attrValue);
+    key[name] = attrValue;
+    if (name !== "id") value[name] = attrValue;
   }
 
   div.appendChild(key);
@@ -130,17 +127,45 @@ function addPair(element, option, param, attributes = {}) {
 
 /**
  * @param {string} option
+ * @param {HTMLFieldSetElement} fieldset
+ * @param {Object.<string, Array.<HTMLInputElement | HTMLSelectElement>>} conditionParams
+ * @returns {void}
+ */
+function updateConditional(option, fieldset, conditionParams) {
+  const context = options.container[option];
+  const formData = new FormData();
+  for (const input of fieldset.querySelectorAll("input, select")) {
+    if (input.name) formData.append(input.name, input.value);
+  }
+
+  let data = parseFormData(formData, true);
+  if (data[option]) data = data[option][0];
+  else return;
+
+  for (const [conditionParam, elements] of Object.entries(conditionParams)) {
+    const contextParam = context.params.find((param) => param.param === conditionParam);
+    if (!contextParam.condition(data)) {
+      elements.forEach((element) => (element.disabled = true));
+    } else {
+      elements.forEach((element) => (element.disabled = false));
+    }
+  }
+}
+
+/**
+ * @param {string} option
  * @param {bool} isRemovable
  * @returns {HTMLFieldSetElement}
  */
 function generateOption(option, isRemovable = true) {
   const context = options.container[option];
+  // { param1: HTMLInputElement[] | HTMLSelectElement[], param2: [] }
+  const conditionParams = {};
 
-  if (!context.allowMultiple) {
+  if (!context.allowMultiple)
     document
       .getElementById("select-option")
       .querySelector(`option[value=${option}]`).disabled = true;
-  }
 
   const fieldset = document.createElement("fieldset");
   fieldset.className = "option";
@@ -155,12 +180,9 @@ function generateOption(option, isRemovable = true) {
     remove.textContent = "Remove";
     remove.onclick = function () {
       this.parentElement.parentElement.remove();
-      const selectOption = document
+      document
         .getElementById("select-option")
-        .querySelector(`option[value=${option}]`);
-      if (selectOption.disabled) {
-        selectOption.disabled = false;
-      }
+        .querySelector(`option[value=${option}]`).disabled = false;
     };
     legend.appendChild(remove);
   }
@@ -208,10 +230,13 @@ function generateOption(option, isRemovable = true) {
      * @param {Object.<string, string>} attributes
      * @returns {HTMLElement}
      */
-    const add = (element, option, param, attributes) => {
+    const add = (element, option, param, attributes = {}) => {
       // Remove "display: none"
-      if (element.style.display === "none")
-        element.style.removeProperty("display");
+      if (element.style.display === "none") element.style.removeProperty("display");
+
+      // Add conditions
+      if (conditionParams)
+        attributes.onchange = () => updateConditional(option, fieldset, conditionParams);
 
       return func(element, option, param, attributes);
     };
@@ -246,8 +271,7 @@ function generateOption(option, isRemovable = true) {
     less.textContent = "-";
     // Remove last input but always leave one when required
     less.onclick = () => {
-      if (values.childElementCount > (param.isOptional ? 0 : 1))
-        values.lastElementChild.remove();
+      if (values.childElementCount > (param.isOptional ? 0 : 1)) values.lastElementChild.remove();
 
       // Add "display: none" to remove flex gap
       if (values.childElementCount === 0) values.style.display = "none";
@@ -259,14 +283,30 @@ function generateOption(option, isRemovable = true) {
     fieldset.appendChild(div);
   }
 
+  for (const input of fieldset.querySelectorAll("input, select")) {
+    const field = input.name.split(".")[1];
+    const contextParam = context.params.find((param) => param.param === field);
+
+    if (contextParam && "condition" in contextParam) {
+      conditionParams[field] ??= [];
+      conditionParams[field].push(input);
+    }
+  }
+
+  updateConditional(option, fieldset, conditionParams);
   return fieldset;
 }
 
 /**
  * @param {FormData} formData
- * @returns {object}
+ * @param {boolean} parseEmpty
+ * @returns {Object.<string, Array.<Object.<
+ *   string, string | string[] | Object.<string, string>
+ * >>>}
  */
-function parseFormData(formData) {
+function parseFormData(formData, parseEmpty = false) {
+  // type: { option: [{ name: value, name: value }, {...}] }
+  // value is string | string[] | Object<string, string>
   const result = {};
 
   function updateParams() {
@@ -284,6 +324,10 @@ function parseFormData(formData) {
   }
 
   function updateResult() {
+    if (prevOption === undefined) {
+      return;
+    }
+
     // Add params to result
     result[prevOption] ??= [];
     result[prevOption].push(currentParams);
@@ -298,15 +342,16 @@ function parseFormData(formData) {
   let currentPairs = {};
   for (const [name, value] of formData.entries()) {
     // Empty option
-    if (name == "submit" || value === "") continue;
+    if (!parseEmpty && value === "") continue;
+
+    // Submit option
+    if (name == "submit") continue;
 
     // Assuming valid data
     let values = name.split(".");
-    if (values[0] === "submit") continue;
     const isArray = name.endsWith("]");
     const index = values.length - 1;
-    if (isArray)
-      values[index] = values[index].substring(0, values[index].indexOf("["));
+    if (isArray) values[index] = values[index].substring(0, values[index].indexOf("["));
     const [option, field, type] = values;
     const arrayIndex = isArray
       ? Number(name.substring(name.indexOf("[") + 1, name.indexOf("]")))
@@ -314,10 +359,8 @@ function parseFormData(formData) {
 
     // Next option
     if (option !== prevOption) {
-      if (prevOption !== undefined) {
-        updateParams();
-        updateResult();
-      }
+      updateParams();
+      updateResult();
       prevOption = option;
     }
 
@@ -383,15 +426,13 @@ function generatePairs(data, arg = false) {
 
       const context = options.container[name];
       // Try to use argFormat
-      const format =
-        context.argFormat || context.format || (({ value }) => value);
+      const format = context.argFormat || context.format || (({ value }) => value);
 
       // Seperate seperable args
       let addedPair = false;
       for (const [param, value] of Object.entries(params)) {
         // Check if value is object (object = pair)
-        if (!(value && typeof value === "object" && !Array.isArray(value)))
-          continue;
+        if (!(value && typeof value === "object" && !Array.isArray(value))) continue;
 
         addedPair = true;
         for (const [key, val] of Object.entries(value))
@@ -446,17 +487,13 @@ function generatePodmanRun(data) {
     }
   }
 
-  return ["podman", ...globalArgs, "run", ...args, image, exec]
-    .filter(Boolean)
-    .join(" ");
+  return ["podman", ...globalArgs, "run", ...args, image, exec].filter(Boolean).join(" ");
 }
 
 // Event listener for calling generateOption
 document.getElementById("add-option").addEventListener("submit", (event) => {
   event.preventDefault();
-  const fieldset = generateOption(
-    document.getElementById("select-option").value
-  );
+  const fieldset = generateOption(document.getElementById("select-option").value);
   document.getElementById("options").appendChild(fieldset);
 });
 
@@ -485,5 +522,4 @@ for (const option in options.container) {
 }
 
 // Add image option (required container key)
-const fieldset = generateOption("Image", false);
-document.getElementById("options").appendChild(fieldset);
+document.getElementById("options").appendChild(generateOption("Image", false));

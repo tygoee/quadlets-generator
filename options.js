@@ -18,12 +18,7 @@ class Format {
    * @param {string[]} param0.permissions
    * @returns {string}
    */
-  static mapping({
-    host,
-    container = null,
-    permissions = [],
-    ifExists = false,
-  }) {
+  static mapping({ host, container = null, permissions = [], ifExists = false }) {
     // Remove duplicates
     permissions = [...new Set(permissions)];
 
@@ -38,9 +33,7 @@ class Format {
    */
   static pair({ values }) {
     return Object.entries(values)
-      .map(([key, value]) =>
-        value.includes(" ") ? `"${key}=${value}"` : `${key}=${value}`
-      )
+      .map(([key, value]) => (value.includes(" ") ? `"${key}=${value}"` : `${key}=${value}`))
       .join(" ");
   }
 }
@@ -68,6 +61,7 @@ param:
   placeholder?: string (type=path|string), string[] (type=pair)
   isArray?: bool
   isOptional?: bool (always ignored (true) when type=boolean)
+  condition?: function(option) (return false to disable input)
 
   when type === select:
   -> options: option[] | object<name, option>
@@ -248,12 +242,57 @@ const options = {
         },
       ],
     },
-    // DNS: {
-    //   arg: "dns",
-    // },
-    // DNSOption: {
-    //   arg: "dns-option",
-    // },
+    DNS: {
+      arg: "dns",
+      allowMultiple: true,
+      params: [
+        {
+          param: "value",
+          name: "IP Address",
+          type: "string",
+          placeholder: "192.168.0.1",
+        },
+      ],
+    },
+    DNSOption: {
+      arg: "dns-option",
+      allowMultiple: true,
+      format: ([option, value]) => (option + value ? `:${value}` : ""),
+      params: [
+        {
+          param: "option",
+          name: "Option",
+          type: "select",
+          options: [
+            "debug",
+            "ndots",
+            "timeout",
+            "attempts",
+            "rotate",
+            "no-aaaa",
+            "no-check-names",
+            "inet6",
+            "ip6-bytestring",
+            "ip6-dotint",
+            "no-ip6-dotint",
+            "edns0",
+            "single-request",
+            "single-request-reopen",
+            "no-tld-query",
+            "use-vc",
+            "no-reload",
+            "trust-ad",
+          ],
+        },
+        {
+          param: "value",
+          name: "Value",
+          type: "string",
+          isOptional: true,
+          condition: (option) => ["ndots", "timeout", "attempts"].includes(option.option),
+        },
+      ],
+    },
     // DNSSearch: {
     //   arg: "dns-search",
     // },
