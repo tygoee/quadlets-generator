@@ -23,7 +23,7 @@
     "@vue/tsconfig": "^0.8.1",
     "codemirror": "^6.0.2",
     "npm-run-all2": "^8.0.4",
-    "systemd-parser": "^2.1.0",
+    "systemd-parser": "^2.1.1",
     "vite": "^7.3.6",
     "vue": "^3.5.40",
     "vue-tsc": "^3.3.9"
@@ -46,7 +46,7 @@
     "vitest": "^4.1.10"
   },
   "overrides": {
-    "minimatch": "^10.2.2"
+    "glob": "^13.0.6"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

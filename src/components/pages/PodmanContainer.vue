@@ -11,16 +11,15 @@ const props = defineProps<{
 const resource = props.resource;
 provide('id', resource.id);
 
-const inputs = ['name', 'image'] as const;
-
-const quadlets: Record<(typeof inputs)[number], string> = {
+const quadlets: Record<string, string> = {
   name: 'ContainerName',
   image: 'Image',
 } as const;
 
 resource.placeholder = 'Unnamed container';
-const values = ref<Record<string, string | string[]>>({ name: '' });
-for (const option of Object.keys(inputs)) {
+const values = ref<Record<string, string | string[]>>({ name: '', image: '' });
+
+for (const option of Object.keys(quadlets)) {
   values.value[option] ??= '';
 }
 
