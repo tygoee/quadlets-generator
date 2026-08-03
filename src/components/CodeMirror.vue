@@ -62,7 +62,7 @@ function systemdLinter(doc: Parser<void>) {
         if (vals.length === 0) continue;
 
         const val = vals[vals.length - 1];
-        values.value[invertedMap[key]] = val;
+        values.value[invertedMap[key]!] = val!;
       }
     }
 
