@@ -7,38 +7,51 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
+    "test:unit": "vitest",
     "build-only": "vite build",
-    "type-check": "vue-tsc --build",
+    "type-check": "vue-tsc -p tsconfig.app.json",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@tsconfig/node24": "^24.0.4",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/tsconfig": "^0.8.1",
     "codemirror": "^6.0.2",
-    "vue": "^3.5.27"
+    "npm-run-all2": "^8.0.4",
+    "systemd-parser": "^2.1.0",
+    "vite": "^7.3.6",
+    "vue": "^3.5.40",
+    "vue-tsc": "^3.3.9"
   },
   "devDependencies": {
-    "@tsconfig/node24": "^24.0.4",
-    "@types/node": "^24.10.9",
-    "@vitejs/plugin-vue": "^6.0.3",
-    "@vitejs/plugin-vue-jsx": "^5.1.3",
-    "@vue/eslint-config-typescript": "^14.6.0",
-    "@vue/tsconfig": "^0.8.1",
-    "eslint": "^9.39.2",
+    "@types/jsdom": "^28.0.3",
+    "@vitest/eslint-plugin": "^1.6.25",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/test-utils": "^2.4.11",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-oxlint": "~1.42.0",
-    "eslint-plugin-vue": "~10.7.0",
+    "eslint-plugin-oxlint": "^1.50.0",
+    "eslint-plugin-vue": "^10.8.0",
     "jiti": "^2.6.1",
-    "npm-run-all2": "^8.0.4",
-    "oxlint": "~1.42.0",
-    "prettier": "3.8.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.5",
-    "vue-tsc": "^3.2.4"
+    "jsdom": "^30.0.1",
+    "oxlint": "^1.76.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "vite-plugin-vue-devtools": "^8.2.1",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "minimatch": "^10.2.2"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }

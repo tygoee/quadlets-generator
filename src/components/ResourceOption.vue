@@ -5,7 +5,7 @@ const props = defineProps<{
   option: string;
   name: string;
   pattern?: string;
-  modelValue?: string;
+  modelValue?: string | string[];
 }>();
 
 const slots = defineSlots<{

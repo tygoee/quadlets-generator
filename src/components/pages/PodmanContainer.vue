@@ -11,12 +11,22 @@ const props = defineProps<{
 const resource = props.resource;
 provide('id', resource.id);
 
+const inputs = ['name', 'image'] as const;
+
+const quadlets: Record<(typeof inputs)[number], string> = {
+  name: 'ContainerName',
+  image: 'Image',
+} as const;
+
 resource.placeholder = 'Unnamed container';
-const values = ref<Record<string, string>>({ name: '' });
+const values = ref<Record<string, string | string[]>>({ name: '' });
+for (const option of Object.keys(inputs)) {
+  values.value[option] ??= '';
+}
 
 watch(
   () => values.value.name,
-  (val?: string) => {
+  (val?: string | string[]) => {
     if (typeof val === 'string') resource.name = val;
   },
 );
@@ -33,13 +43,16 @@ watch(
           <template #description>The container name</template>
           <template #info>The container name is used to reference the container</template>
         </ResourceOption>
-        <ResourceOption option="image" name="Image / FQIN"></ResourceOption>
+        <ResourceOption option="image" name="Image / FQIN" v-model="values.image"></ResourceOption>
       </fieldset>
       <fieldset></fieldset>
     </template>
     <template #tab-networking>Networking</template>
     <template #output>
-      <ResourceOutput :types="{ quadlet: 'Quadlets' }" v-model="values"></ResourceOutput>
+      <ResourceOutput
+        :types="{ quadlets: { name: 'Quadlets', map: quadlets, required: ['image'] } }"
+        v-model="values"
+      ></ResourceOutput>
     </template>
   </Page>
 </template>

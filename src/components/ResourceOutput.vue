@@ -1,43 +1,13 @@
 <script setup lang="ts">
-import { inject, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
-import { EditorView, basicSetup } from 'codemirror';
-import { Compartment } from '@codemirror/state';
-import { isDark } from '@/theme';
+import { inject } from 'vue';
+import CodeMirror from './CodeMirror.vue';
 
 const props = defineProps<{
-  types: Record<string, string>; // name, display
+  types: Record<string, { name: string; map: Record<string, string>; required: string[] }>;
 }>();
 
-const values = defineModel<Record<string, string>>({ required: true });
+const values = defineModel<Record<string, string | string[]>>({ required: true });
 const id = inject<number>('id');
-
-const codeMirrorRef = useTemplateRef<HTMLOutputElement>('code-mirror');
-let view: EditorView | null = null;
-
-// Used to automatically change theme
-const themeCompartment = new Compartment();
-const lightTheme = EditorView.theme({}, { dark: false });
-const darkTheme = EditorView.theme({}, { dark: true });
-
-onMounted(() => {
-  view = new EditorView({
-    parent: codeMirrorRef.value!,
-    extensions: [basicSetup, themeCompartment.of(isDark.value ? darkTheme : lightTheme)],
-  });
-
-  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: JSON.stringify(values.value) } });
-
-  watch(isDark, (val) => view?.dispatch({ effects: themeCompartment.reconfigure(val ? darkTheme : lightTheme) }));
-  watch(
-    values,
-    (val) => view?.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: JSON.stringify(val) } }),
-    { deep: true },
-  );
-});
-
-onBeforeUnmount(() => {
-  view?.destroy();
-});
 </script>
 
 <template>
@@ -45,12 +15,12 @@ onBeforeUnmount(() => {
     <div class="output-options">
       <label :for="`output-type-${id}`">Output type</label>
       <select :id="`output-type-${id}`">
-        <option :value="value" v-for="[value, name] in Object.entries(props.types)" :key="value">
-          {{ name }}
+        <option :value="name" v-for="[name, entry] in Object.entries(props.types)" :key="name">
+          {{ entry.name }}
         </option>
       </select>
     </div>
-    <output ref="code-mirror"></output>
+    <CodeMirror :map="props.types['quadlets']!.map" :required="props.types['quadlets']!.required" v-model="values" />
   </div>
 </template>
 
@@ -75,12 +45,12 @@ onBeforeUnmount(() => {
   flex: 1;
 }
 
-output {
+.code-mirror {
   height: 100%;
   overflow-y: auto;
 }
 
-output > div {
+.code-mirror > div {
   height: 100%;
 }
 </style>
